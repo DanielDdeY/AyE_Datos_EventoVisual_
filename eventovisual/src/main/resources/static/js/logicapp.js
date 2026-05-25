@@ -63,8 +63,10 @@ function configurarPanelAdmin() {
                         </button>
                         <button onclick="cargarTablero(${proy.idProyecto}, JSON.parse(localStorage.getItem('usuarioSesion')))" style="background: #9c27b0; color: white; padding: 5px 10px; cursor: pointer; margin-top: 5px;">
                          Ver Tablero</button>
-                         <button onclick="crearTareaAdminAJAX(${proy.idProyecto})" style="background: #e91e63; color: white; border: none; padding: 5px 10px; cursor: pointer; margin-top: 5px; margin-left: 4px;">
+                         <button onclick="crearTareaAdminAJAX(${proy.idProyecto})" style="background: #1ee9e9; color: white; border: none; padding: 5px 10px; cursor: pointer; margin-top: 5px; margin-left: 4px;">
                           Crear Tarea</button>
+                          <button onclick="eliminarProyectoAJAX(${proy.idProyecto})" style="background: #f61f0f; color: white; border: none; padding: 5px 10px; cursor: pointer; margin-left: 4px;"> 
+                          Eliminar</button>
                     `;
                     contenedor.appendChild(tarjeta);
                 });
@@ -381,14 +383,67 @@ async function avanzarTarea(idTarea, nuevoEstado) {
     }
 }
 
-async function rechazarTarea(idTarea) {
+window.rechazarTarea = async function(idTarea) {
+
     const motivo = prompt("Describe el motivo del rechazo para notificar al desarrollador:");
-    if (motivo) {
-        // Petición AJAX al backend para crear la Notificación de Rechazo y devolverla a En Progreso
-        console.log(`Enviando rechazo de tarea ${idTarea}. Motivo: ${motivo}`);
-        alert("Tarea rechazada. Notificación insertada en el buzón del usuario.");
+
+    // Si cancela o deja vacío
+    if (!motivo || motivo.trim() === "") {
+        alert("Debes escribir un motivo de rechazo.");
+        return;
     }
-}
+
+    const usuarioSesion = JSON.parse(localStorage.getItem("usuarioSesion"));
+
+    if (!usuarioSesion) {
+        alert("Sesión no encontrada.");
+        return;
+    }
+
+    const idRevisor = usuarioSesion.idUsuario;
+
+    try {
+        console.log(
+            `Rechazando tarea ${idTarea} por usuario ${idRevisor}`
+        );
+
+        const response = await fetch(
+            `/api/tareas/${idTarea}/rechazar?idRevisor=${idRevisor}`,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "text/plain"
+                },
+
+                body: motivo
+            }
+        );
+
+
+        const mensaje = await response.text();
+
+        if (response.ok) {
+            alert("Tarea rechazada correctamente.\n\n" + mensaje);
+            console.log("La ListaDobleEnlazada retrocedió el estado correctamente.");
+
+            if (window.proyectoActivoTablero) {
+
+                await cargarTablero(
+                    window.proyectoActivoTablero,
+                    usuarioSesion
+                );
+                console.log("Tablero actualizado correctamente.");
+            }
+
+        } else {
+            alert("No se pudo rechazar la tarea.\n\n" + mensaje);
+        }
+    } catch (error) {
+        console.error("Error AJAX al rechazar tarea:", error);
+        alert("Error de conexión con el servidor.");
+    }
+};
 
 window.invitarUsuarioAJAX = async function(idProyecto) {
     const email = prompt("Ingresa el correo del desarrollador a invitar:");
@@ -435,6 +490,24 @@ window.crearTareaAdminAJAX = async function(idProyecto) {
             }
         } catch (error) {
             console.error("Error al crear tarea desde admin:", error);
+        }
+    }
+};
+
+window.eliminarProyectoAJAX = async function(idProyecto) {
+    const seguro = confirm("¿Estás completamente seguro de eliminar este proyecto?");
+    if (seguro) {
+        try {
+            const response = await fetch(`/api/proyectos/${idProyecto}`, { method: 'DELETE' });
+            const msj = await response.text();
+            alert(response.ok ? "" + msj : "" + msj);
+            
+            if (response.ok) {
+                cargarProyectosAdmin(document.getElementById("filtro-estado").value);
+                document.getElementById("tablero-kanban").classList.add("hidden");
+            }
+        } catch (error) {
+            console.error("Error al eliminar proyecto:", error);
         }
     }
 };

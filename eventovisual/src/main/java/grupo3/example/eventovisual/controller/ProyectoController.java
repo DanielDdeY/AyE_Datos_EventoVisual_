@@ -51,4 +51,14 @@ public class ProyectoController {
         }
         return ResponseEntity.badRequest().body("Error: El proyecto no existe o el correo del usuario es inválido.");
     }
+    // DELETE /api/proyectos/5
+    @DeleteMapping("/{idProyecto}")
+    public ResponseEntity<String> eliminarProyecto(@PathVariable Integer idProyecto) {
+        try {
+            proyectoService.eliminarProyecto(idProyecto);
+            return ResponseEntity.ok("Proyecto eliminado correctamente de la base de datos.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: No se pudo eliminar. Asegúrese de borrar primero las tareas vinculadas a este proyecto.");
+        }
+    }
 }

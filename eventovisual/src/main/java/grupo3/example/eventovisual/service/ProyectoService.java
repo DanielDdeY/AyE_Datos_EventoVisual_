@@ -81,4 +81,7 @@ public class ProyectoService {
         }
         return false;
     }
+    public void eliminarProyecto(Integer idProyecto) {
+        proyectoRepository.deleteById(idProyecto);
+    }
 }

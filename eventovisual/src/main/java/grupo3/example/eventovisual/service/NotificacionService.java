@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class NotificacionService {
@@ -52,9 +51,7 @@ public class NotificacionService {
         List<Notificacion> pendientes = notificacionRepository
                 .findByEmailDestinatarioAndEstado(emailUsuario, EstadoNotificacion.PENDIENTE);
 
-            // --------ACCAAAAA---------//
         //  IMPLEMENTACION DE LA LISTA SIMPLE ENLAZADA
-            // -----MIRA RUSSELL-----//
     ListaSimpleEnlazada<Notificacion> listaEnlazada =
             new ListaSimpleEnlazada<>();
 
@@ -63,13 +60,13 @@ public class NotificacionService {
         listaEnlazada.insertar(notif);
     }
 
-    //  ORDENAMIENTO !!!!!!!!!!! (MIRA AQUI OE CIEGO)
+    //  ORDENAMIENTO 
     listaEnlazada.ordenar((n1, n2) ->
             n1.getIdNotificacion()
                     .compareTo(n2.getIdNotificacion())
     );
 
-    //  RECORRIDO MANUAL DE LA LISTA !!!!!!!!!!! (PARA ACEPTAR P)
+    //  RECORRIDO MANUAL DE LA LISTA 
     List<NotificacionResponseDTO> respuesta =
             new java.util.ArrayList<>();
 
@@ -84,7 +81,7 @@ public class NotificacionService {
 
     return respuesta;
     }
-    // ACA SE SIGUE USANDO COCHACHI
+    // PARA MOSTRAR LA LISTA
     public boolean aceptarInvitacion(Integer idNotificacion, Integer idUsuario) {
         Optional<Notificacion> notifOpt = notificacionRepository.findById(idNotificacion);
         Optional<Usuario> usuarioOpt = usuarioRepository.findById(idUsuario);

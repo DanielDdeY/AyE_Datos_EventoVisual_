@@ -29,7 +29,8 @@ public class TareaService {
     // Operación: Crear Tarea
     public boolean crearTarea(Integer idProyecto, String titulo, String descripcion, String prioridad, Integer idUsuarioAsignado) {
         // Validación Crítica: ¿Hay invitaciones pendientes en este proyecto?
-        long pendientes = notificacionRepository.countByProyecto_IdProyectoAndEstado(idProyecto, EstadoNotificacion.PENDIENTE);
+        long pendientes = notificacionRepository.countByProyecto_IdProyectoAndEstadoAndTipoNotificacion(
+            idProyecto, EstadoNotificacion.PENDIENTE, TipoNotificacion.INVITACION);
         if (pendientes > 0) {
             return false; // Bloqueado: Faltan miembros por aceptar
         }
@@ -57,12 +58,9 @@ public class TareaService {
 
         Tarea tarea = tareaOpt.get();
 
-        // --------ACCAAA OTRAVEZZZ!!!*/*/*/ */ */
-        // IMPLEMENTACIÓN DE LISTA DOBLE ENLAZADA
-        // --- ACA TIENES QUE VER CHENSEN ---//
+        // IMPLEMENTACIÓN DE LISTA DOBLE ENLAZADA //
 
-        ListaDobleEnlazada<EstadoActual> flujoEstados =
-                new ListaDobleEnlazada<>();
+        ListaDobleEnlazada<EstadoActual> flujoEstados = new ListaDobleEnlazada<>();
 
         flujoEstados.insertar(EstadoActual.TO_DO);
         flujoEstados.insertar(EstadoActual.EN_PROGRESO);
@@ -72,11 +70,9 @@ public class TareaService {
         // RECORRIDO DE LA LISTA DOBLE
 
             for (int i = 0; i < flujoEstados.getTamano(); i++) {
-
             EstadoActual estado = flujoEstados.obtener(i);
 
                 if (estado == tarea.getEstadoActual()) {
-
                     // Si ya está terminado
                     if (i == flujoEstados.getTamano() - 1) {
                     return false;
@@ -97,7 +93,6 @@ public class TareaService {
                     }
 
                 tareaRepository.save(tarea);
-
                 return true;
                 }
             }
@@ -117,7 +112,6 @@ public class TareaService {
 
             Tarea tarea = tareaOpt.get();
 
-                    // ---SIGAN VIENDOOO ---//
             // SEGUNDA VUELTA DE LISTA DOBLE ENLAZADA //
 
             ListaDobleEnlazada<EstadoActual> flujoEstados =
@@ -142,23 +136,16 @@ public class TareaService {
                     return false;
                     }
 
-                // APLICACION DE RETRO EN LA LISTA DOBLE
+                // APLICACION DE RETROCEDER EN LA LISTA DOBLE
 
-                EstadoActual estadoAnterior =
-                        flujoEstados.obtener(i - 1);
-
+                EstadoActual estadoAnterior = flujoEstados.obtener(i - 1);
                 tarea.setEstadoActual(estadoAnterior);
-
                 tareaRepository.save(tarea);
 
-                // GENERAR NOTIFICACIÓN (LO QUE NUNCA HIZO ELLA CONTIGO)
+                // GENERAR NOTIFICACIÓN
+                Notificacion alertaRechazo = new Notificacion();
 
-                Notificacion alertaRechazo =
-                        new Notificacion();
-
-                alertaRechazo.setProyecto(
-                        tarea.getProyecto()
-                );
+                alertaRechazo.setProyecto(tarea.getProyecto());
 
                 // Destinatario
                 if (tarea.getUsuarioAsignado() != null) {
@@ -168,24 +155,13 @@ public class TareaService {
                     );
 
                 } else {
-                    return false;
+                    alertaRechazo.setEmailDestinatario("sin-asignar@taskflow.com");
                 }
 
-                alertaRechazo.setTipoNotificacion(
-                        TipoNotificacion.TAREA_RECHAZADA
-                );
-
-                alertaRechazo.setMensajeDescripcion(
-                        motivoRechazo
-                );
-
-                alertaRechazo.setRevisor(
-                        revisorOpt.get()
-                );
-
-                alertaRechazo.setEstado(
-                        EstadoNotificacion.PENDIENTE
-                );
+                alertaRechazo.setTipoNotificacion(TipoNotificacion.TAREA_RECHAZADA);
+                alertaRechazo.setMensajeDescripcion(motivoRechazo);
+                alertaRechazo.setRevisor(revisorOpt.get());
+                alertaRechazo.setEstado(EstadoNotificacion.PENDIENTE);
 
                 notificacionRepository.save(alertaRechazo);
 
