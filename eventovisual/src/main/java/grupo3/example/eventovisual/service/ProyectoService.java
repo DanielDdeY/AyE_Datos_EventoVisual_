@@ -10,7 +10,10 @@ import grupo3.example.eventovisual.model.Usuario;
 import grupo3.example.eventovisual.repository.ProyectoRepository;
 import grupo3.example.eventovisual.repository.ProyectoMiembroRepository;
 import grupo3.example.eventovisual.repository.UsuarioRepository;
-import grupo3.example.eventovisual.controller.ManejoProyectos;
+
+import grupo3.example.eventovisual.structures.ArbolBinarioBusqueda;
+import jakarta.annotation.PostConstruct;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -29,18 +32,30 @@ public class ProyectoService {
     @Autowired
     private ProyectoMiembroRepository proyectoMiembroRepository;
 
-    @Autowired
-    private ManejoProyectos manejoProyectos; 
+    @PostConstruct
+    public void inicializarArbolDesdeBD() {
+        List<Proyecto> todosLosProyectos = proyectoRepository.findAll();
+        for (Proyecto p : todosLosProyectos) {
+            arbolProyectos.insertar(p.getNombre()); // OPERACION: INSERCIÓN INICIAL
+        }
+        System.out.println("¡Árbol Binario de Búsqueda indexado con éxito con " + todosLosProyectos.size() + " proyectos!");
+    }
+
+    private final ArbolBinarioBusqueda<String> arbolProyectos = new ArbolBinarioBusqueda<>();
 
     // 1. Crear Proyecto e insertar en H2
     public ProyectoResponseDTO crearProyecto(ProyectoRequestDTO dto) {
         Proyecto nuevoProyecto = ProyectoMapper.toEntity(dto);
         Proyecto proyectoGuardado = proyectoRepository.save(nuevoProyecto);
-        manejoProyectos.insertar(proyectoGuardado.getNombre());
+        arbolProyectos.insertar(proyectoGuardado.getNombre());
         return ProyectoMapper.toResponseDTO(proyectoGuardado);
     }
-
-    // 2. Listar proyectos por estado
+    // 2. Autocompletar proyectos usando el Árbol Binario
+    public List<String> sugerirProyectosPorPrefijo(String prefijo) {
+        // OPERACION: BUSQUEDA POR PREFIJO EN EL ARBOL 
+        return arbolProyectos.buscarPorPrefijo(prefijo);
+    }
+    // 3. Listar proyectos por estado
     public List<ProyectoResponseDTO> listarProyectosPorEstado(String estadoStr) {
         EstadoProyecto estado = EstadoProyecto.valueOf(estadoStr.toUpperCase());
         List<Proyecto> proyectos = proyectoRepository.findByEstadoProyecto(estado);
@@ -50,7 +65,7 @@ public class ProyectoService {
                 .collect(Collectors.toList());
     }
 
-    // 3. Obtener los proyectos de un usuario normal (nada especial asi como tu comprenderas)
+    // 4. Obtener los proyectos de un usuario normal (nada especial asi como tu comprenderas)
     public List<ProyectoResponseDTO> obtenerProyectosPorUsuario(Integer idUsuario) {
         List<ProyectoMiembro> membresias = proyectoMiembroRepository.findByUsuario_IdUsuario(idUsuario);
         
@@ -59,7 +74,7 @@ public class ProyectoService {
                 .collect(Collectors.toList());
     }
 
-    // 4. Asignar un fefe de grupo al proyecto
+    // 5. Asignar un fefe de grupo al proyecto
     public boolean asignarJefeGrupo(Integer idProyecto, String emailJefe) {
         Optional<Proyecto> proyOpt = proyectoRepository.findById(idProyecto);
         Optional<Usuario> jefeOpt = usuarioRepository.findByEmail(emailJefe);

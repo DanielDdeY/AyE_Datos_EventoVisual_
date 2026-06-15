@@ -6,6 +6,8 @@ import grupo3.example.eventovisual.repository.ProyectoRepository;
 import grupo3.example.eventovisual.repository.TareaRepository;
 import grupo3.example.eventovisual.repository.UsuarioRepository;
 import grupo3.example.eventovisual.structures.ListaDobleEnlazada;
+import grupo3.example.eventovisual.structures.Pila;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +27,18 @@ public class TareaService {
 
     @Autowired
     private ProyectoRepository proyectoRepository;
+
+    // Para retroceder una accion
+    private static class MovimientoHistorial {
+        Integer idTarea;
+        EstadoActual estadoAnterior;
+
+        MovimientoHistorial(Integer idTarea, EstadoActual estadoAnterior) {
+            this.idTarea = idTarea;
+            this.estadoAnterior = estadoAnterior;
+        }
+    }
+    private final Pila<MovimientoHistorial> pilaDeshacer = new Pila<>();
 
     // Operación: Crear Tarea
     public boolean crearTarea(Integer idProyecto, String titulo, String descripcion, String prioridad, Integer idUsuarioAsignado) {
@@ -55,8 +69,8 @@ public class TareaService {
         Optional<Tarea> tareaOpt = tareaRepository.findById(idTarea);
 
         if (tareaOpt.isPresent()) {
-
         Tarea tarea = tareaOpt.get();
+        EstadoActual estadoViejo = tarea.getEstadoActual();
 
         // IMPLEMENTACIÓN DE LISTA DOBLE ENLAZADA //
 
@@ -93,6 +107,8 @@ public class TareaService {
                     }
 
                 tareaRepository.save(tarea);
+                //AQUI SON LAS PILAS SIEGOS
+                pilaDeshacer.apilar(new MovimientoHistorial(tarea.getIdTarea(), estadoViejo));
                 return true;
                 }
             }
@@ -111,6 +127,7 @@ public class TareaService {
             && revisorOpt.isPresent()) {
 
             Tarea tarea = tareaOpt.get();
+            EstadoActual estadoViejo = tarea.getEstadoActual();
 
             // SEGUNDA VUELTA DE LISTA DOBLE ENLAZADA //
 
@@ -163,13 +180,62 @@ public class TareaService {
                 alertaRechazo.setRevisor(revisorOpt.get());
                 alertaRechazo.setEstado(EstadoNotificacion.PENDIENTE);
 
-                notificacionRepository.save(alertaRechazo);
-
+                
+                // ACA OTRA VEZ PILA
+                pilaDeshacer.apilar(new MovimientoHistorial(tarea.getIdTarea(), estadoViejo));
                 return true;
                 }
             }
         }
 
         return false;
+    }
+    public boolean eliminarTarea(Integer idTarea) {
+        if (tareaRepository.existsById(idTarea)) {
+            tareaRepository.deleteById(idTarea);
+            return true;
+        }
+        return false;
+    }
+
+    // OPERACION DESHACER
+    public boolean deshacerUltimoMovimiento() {
+        if (pilaDeshacer.estaVacia()) {
+            return false; 
+        }
+
+        MovimientoHistorial ultimoMovimiento = pilaDeshacer.desapilar();
+        Optional<Tarea> tareaOpt = tareaRepository.findById(ultimoMovimiento.idTarea);
+        
+        if (tareaOpt.isPresent()) {
+            Tarea tarea = tareaOpt.get();
+            
+            tarea.setEstadoActual(ultimoMovimiento.estadoAnterior);
+            // se librera el usuario
+            if (ultimoMovimiento.estadoAnterior == EstadoActual.TO_DO) {
+                tarea.setUsuarioAsignado(null);
+            }
+            
+            tareaRepository.save(tarea);
+            return true;
+        }
+        return deshacerUltimoMovimiento(); 
+    }
+
+    public String obtenerUltimoMovimiento() {
+        if (pilaDeshacer.estaVacia()) {
+            return "No hay movimientos recientes en el historial.";
+        }
+        
+        // Mira la cima de la pila
+        MovimientoHistorial ultimo = pilaDeshacer.cima();
+        
+        Optional<Tarea> tareaOpt = tareaRepository.findById(ultimo.idTarea);
+        if (tareaOpt.isPresent()) {
+            return "La última tarea modificada fue ID " + ultimo.idTarea + 
+                   " ('" + tareaOpt.get().getTitulo() + "') cuyo estado previo era " + ultimo.estadoAnterior.name();
+        }
+        
+        return "Último movimiento registrado en la tarea ID: " + ultimo.idTarea;
     }
 }

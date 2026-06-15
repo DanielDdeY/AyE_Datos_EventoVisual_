@@ -49,4 +49,13 @@ public class TareaController {
         }
         return ResponseEntity.badRequest().body("Error al rechazar la tarea. Verifique que se encuentre en revisión.");
     }
+    // POST /api/tareas/deshacer
+    @PostMapping("/deshacer")
+    public ResponseEntity<String> deshacerAccion() {
+        boolean exito = tareaService.deshacerUltimoMovimiento();
+        if (exito) {
+            return ResponseEntity.ok("Se ha deshecho el último movimiento con éxito.");
+        }
+        return ResponseEntity.badRequest().body("No hay acciones recientes en el historial para deshacer.");
+    }
 }

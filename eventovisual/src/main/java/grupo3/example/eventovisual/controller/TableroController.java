@@ -2,6 +2,7 @@ package grupo3.example.eventovisual.controller;
 
 import grupo3.example.eventovisual.dto.TareaResponseDTO;
 import grupo3.example.eventovisual.service.TableroService;
+import grupo3.example.eventovisual.service.TareaService;
 import grupo3.example.eventovisual.structures.MatrizDatos;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,9 @@ public class TableroController {
 
     @Autowired
     private TableroService tableroService;
+
+    @Autowired
+    private TareaService tareaService;
 
     // GET /api/tablero/{idProyecto}
     @GetMapping("/{idProyecto}")
@@ -27,5 +31,11 @@ public class TableroController {
         // Si la validación pasa, se genera la matriz 2D con las tareas
         MatrizDatos<TareaResponseDTO> matriz = tableroService.cargarTableroVisual(idProyecto);
         return ResponseEntity.ok(matriz);
+    }
+    // GET /api/tablero/ultimo-movimiento
+    @GetMapping("/ultimo-movimiento")
+    public ResponseEntity<String> obtenerUltimoMovimiento() {
+        String ultimoLog = tareaService.obtenerUltimoMovimiento();
+        return ResponseEntity.ok(ultimoLog);
     }
 }

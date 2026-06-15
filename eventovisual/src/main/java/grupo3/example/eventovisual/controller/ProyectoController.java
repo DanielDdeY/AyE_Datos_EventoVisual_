@@ -61,4 +61,10 @@ public class ProyectoController {
             return ResponseEntity.badRequest().body("Error: No se pudo eliminar. Asegúrese de borrar primero las tareas vinculadas a este proyecto.");
         }
     }
+    // GET /api/proyectos/autocompletar?query=Proy (ARBOL)
+    @GetMapping("/autocompletar")
+    public ResponseEntity<List<String>> autocompletarProyectos(@RequestParam String query) {
+        List<String> sugerencias = proyectoService.sugerirProyectosPorPrefijo(query);
+        return ResponseEntity.ok(sugerencias);
+    }
 }

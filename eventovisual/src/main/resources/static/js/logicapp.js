@@ -28,7 +28,7 @@ function configurarPanelAdmin() {
     document.getElementById("mensaje-vacio").style.display = "none";
 
     // 1. Función interna para cargar y mostrar proyectos desde el backend
-    async function cargarProyectosAdmin(estado) {
+    window.cargarProyectosAdmin = async function(estado) {
         const contenedor = document.getElementById("contenedor-proyectos-admin");
         contenedor.innerHTML = "<p>Cargando proyectos...</p>"; 
         
@@ -78,7 +78,7 @@ function configurarPanelAdmin() {
     }
 
     // 2. Disparador inicial: Carga proyectos activos apenas entre el Admin
-    cargarProyectosAdmin("ACTIVO");
+    window.cargarProyectosAdmin("ACTIVO");
 
     // BTN crear proyecto
     document.getElementById("btn-crear-proyecto").addEventListener("click", async () => {
@@ -104,9 +104,52 @@ function configurarPanelAdmin() {
     });
 
     document.getElementById("filtro-estado").addEventListener("change", (e) => {
-        cargarProyectosAdmin(e.target.value);
+        window.cargarProyectosAdmin(e.target.value);
+    });
+
+    // Autocompletado Inteligente con Árbol Binario (Ni mas vuelvo a hacer esta hvda)
+    const buscador = document.getElementById("buscador-proyectos");
+    const cajaSugerencias = document.createElement("div");
+    cajaSugerencias.style.position = "absolute";
+    cajaSugerencias.style.background = "white";
+    cajaSugerencias.style.border = "1px solid #ccc";
+    cajaSugerencias.style.width = "250px";
+    cajaSugerencias.style.display = "none";
+    buscador.parentNode.insertBefore(cajaSugerencias, buscador.nextSibling);
+
+    buscador.addEventListener("input", async (e) => {
+        const query = e.target.value;
+        if (query.length < 2) { cajaSugerencias.style.display = "none"; return; }
+
+        try {
+            const response = await fetch(`/api/proyectos/autocompletar?query=${query}`);
+            if (response.ok) {
+                const sugerencias = await response.json();
+                cajaSugerencias.innerHTML = "";
+                if (sugerencias.length > 0) {
+                    cajaSugerencias.style.display = "block";
+                    sugerencias.forEach(nombreProy => {
+                        const item = document.createElement("div");
+                        item.innerText = nombreProy;
+                        item.style.padding = "10px";
+                        item.style.cursor = "pointer";
+                        item.style.borderBottom = "1px solid #eee";
+                        
+                        item.addEventListener("click", () => {
+                            buscador.value = nombreProy;
+                            cajaSugerencias.style.display = "none";
+                            alert(`Has seleccionado: ${nombreProy}. Aquí filtraríamos el tablero exacto.`);
+                        });
+                        cajaSugerencias.appendChild(item);
+                    });
+                } else {
+                    cajaSugerencias.style.display = "none";
+                }
+            }
+        } catch (error) {}
     });
 }
+
 
 // Funcion: Asignar Jefe (Llamada desde la tarjeta anterior HTML)
 window.asignarJefeAJAX = async function(idProyecto) {
@@ -297,6 +340,7 @@ async function cargarTablero(idProyecto, usuarioSesion) {
             contenedorTablero.classList.remove("hidden");
             msjVacio.style.display = "none";
             document.getElementById("btn-crear-tarea").classList.remove("hidden");
+            document.getElementById("btn-deshacer").style.display = "inline-block";
 
             // Aca se usa Matriz
             const tareasToDo = matrizHelper.matrizTablero[0][0];
@@ -511,3 +555,23 @@ window.eliminarProyectoAJAX = async function(idProyecto) {
         }
     }
 };
+
+document.getElementById("btn-deshacer").addEventListener("click", async () => {
+    try {
+        const response = await fetch("/api/tareas/deshacer", { method: "POST" });
+        const msj = await response.text();
+
+        if (response.ok) {
+            alert("↩️ " + msj);
+
+            if (window.proyectoActivoTablero) {
+                const usuarioSesion = JSON.parse(localStorage.getItem("usuarioSesion"));
+                cargarTablero(window.proyectoActivoTablero, usuarioSesion);
+            }
+        } else {
+            alert("ALERTA " + msj); 
+        }
+    } catch (error) {
+        console.error("Error al ejecutar deshacer:", error);
+    }
+});
